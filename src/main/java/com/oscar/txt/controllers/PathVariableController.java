@@ -6,18 +6,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.oscar.txt.component.ValuesComponent;
 import com.oscar.txt.entity.Values;
-
 
 @RestController
 @RequestMapping("/api/var")
-public class PathVariableController{
+public class PathVariableController {
 
 	@Value("${regiones}")
 	private String regiones;
@@ -28,42 +33,36 @@ public class PathVariableController{
 	@Value("${ruta.archivo}")
 	private String ruta;
 
+	@Autowired
+	private ValuesComponent valuesComponent;
+
+	/**
+	 * Metodo que recibe una peticion para generar un archivo txt.
+	 * 
+	 * @return
+	 */
 	@GetMapping("/archivo")
-	public void archivo() {
+	public ResponseEntity<?> generarArchivoTxt() {
 
 		Values values = new Values();
 		values.setRegiones(regiones);
 		values.setCiclos(ciclos);
 
-		String fileName = ruta + "file.txt";
+		values.setRuta(ruta);
 
+		String fileName = values.getRuta() + "file.txt";
+
+		ArrayList<String> list = (ArrayList<String>) valuesComponent.obtenerLista(values);
+
+		Path file = Paths.get(fileName);
 		try {
-			String separador = ",";
-			String[] arregloRegiones = regiones.split(separador);
-			String[] arregloCiclos = ciclos.split(separador);
-			ArrayList<String> list = new ArrayList<String>();
-			for (int i = 0; i < arregloRegiones.length; i++) {
-				list.add(arregloRegiones[i] + "-" + arregloCiclos[i]);
-			}
-			
-		    System.out.println(" ");
-			list.add(" ");	
-			ArrayList<String> listHor = list;
-			String listHori = listHor.toString().replaceAll("]", "");
-			list.add(0, listHori.replaceAll("\\[", ""));
-
-			list.add("");
-			int contador = 8;
-			for (int i = 0; i < arregloRegiones.length; i++) {
-				list.add(arregloRegiones[contador] + "-" + arregloCiclos[contador]);
-				--contador;
-			}
-
-			Path file = Paths.get(fileName);
 			Files.write(file, list, StandardCharsets.UTF_8);
 		} catch (IOException e) {
-			System.out.println("Algo salio mal!");
 			e.printStackTrace();
 		}
+		Map<String, Object> response = new HashMap<>();
+		response.put("mensaje", "El archivo TXT se ha creado con exito");
+		return new ResponseEntity<Map<String, Object>>(response, HttpStatus.CREATED);
+
 	}
 }
